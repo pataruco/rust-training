@@ -1,24 +1,20 @@
-use std::fs::File;
-use std::io;
 use std::io::prelude::*;
+use std::net::{TcpListener, TcpStream};
 
-fn main() -> Result<(), io::Error> {
-    let open_file = File::open("src/data/content.txt");
-
-    let mut file = match open_file {
-        Ok(f) => f,
-        Err(e) => panic!("Error: {}", e),
-    };
-
+fn handle_client(mut stream: TcpStream) -> Result<(), std::io::Error> {
     let mut buffer = String::new();
-    let contents = file.read_to_string(&mut buffer);
-
-    match contents {
-        Ok(file_content) => file_content,
-        Err(e) => panic!("Error: {}", e),
-    };
-
+    stream.read_to_string(&mut buffer)?;
+    stream.write_all(buffer.as_bytes())?;
     println!("{}", buffer);
+    Ok(())
+}
 
+fn main() -> std::io::Result<()> {
+    let listener = TcpListener::bind("127.0.0.1:8080")?;
+
+    // accept connections and process them serially
+    for stream in listener.incoming() {
+        handle_client(stream?)?;
+    }
     Ok(())
 }
