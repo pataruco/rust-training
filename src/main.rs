@@ -11,7 +11,12 @@ fn handle_client(mut stream: TcpStream, vec: &mut VecDeque<String>) -> Result<()
         println!("{} is stored 📬", buffer);
         vec.push_back(buffer);
     } else {
-        println!("{}  not stored 📭 ", buffer);
+        let msg = vec.pop_back();
+
+        match msg {
+            Some(msg) => stream.write(msg.as_bytes()),
+            None => stream.write(b"no messages"),
+        };
     }
 
     Ok(())
@@ -24,7 +29,7 @@ fn main() -> std::io::Result<()> {
 
     // accept connections and process them serially
     for stream in listener.incoming() {
-        handle_client(stream?, &mut stored_messages)?;
+        handle_client(stream?, &mut stored_messages).unwrap();
     }
     Ok(())
 }
