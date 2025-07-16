@@ -24,6 +24,7 @@ impl Grid {
     }
 }
 
+#[must_use]
 #[derive(Debug, PartialEq, Copy, Clone)]
 struct Robot {
     location: Location,
@@ -36,9 +37,24 @@ struct LostRobot {
     direction: Direction,
 }
 
+#[derive(Debug, PartialEq, Copy, Clone)]
+struct FinishedRobot {
+    location: Location,
+    direction: Direction,
+}
+
 impl From<Robot> for LostRobot {
     fn from(robot: Robot) -> Self {
         LostRobot {
+            location: robot.location,
+            direction: robot.direction,
+        }
+    }
+}
+
+impl From<Robot> for FinishedRobot {
+    fn from(robot: Robot) -> Self {
+        FinishedRobot {
             location: robot.location,
             direction: robot.direction,
         }
@@ -53,7 +69,7 @@ enum Instruction {
 }
 
 impl Robot {
-    fn move_forward(&mut self, Grid(Location { x, y }): &Grid) -> Result<(), LostRobot> {
+    fn move_forward(mut self, Grid(Location { x, y }): &Grid) -> Result<Self, LostRobot> {
         self.location = match self.direction {
             Direction::North if self.location.y + 1 < *y => Location {
                 x: self.location.x,
@@ -75,26 +91,33 @@ impl Robot {
                 return Err(self.clone().into());
             }
         };
-        Ok(())
+        Ok(self)
     }
 
-    fn turn_left(&mut self) {
+    fn turn_left(mut self) -> Self {
         self.direction = self.direction.turn_left();
+        return self;
     }
 
-    fn turn_right(&mut self) {
+    fn turn_right(mut self) -> Self {
         self.direction = self.direction.turn_right();
+        return self;
     }
 
-    fn follows(&mut self, instructions: &[Instruction], grid: &Grid) -> Result<(), LostRobot> {
+    fn follows(
+        self,
+        instructions: &[Instruction],
+        grid: &Grid,
+    ) -> Result<FinishedRobot, LostRobot> {
+        let mut robot = self;
         for instruction in instructions {
-            match instruction {
-                Instruction::Left => self.turn_left(),
-                Instruction::Right => self.turn_right(),
-                Instruction::Forward => (self.move_forward(grid)?),
-            }
+            robot = match instruction {
+                Instruction::Left => robot.turn_left(),
+                Instruction::Right => robot.turn_right(),
+                Instruction::Forward => robot.move_forward(grid)?,
+            };
         }
-        Ok(())
+        Ok(robot.into())
     }
 }
 
@@ -171,29 +194,29 @@ mod tests {
     #[test]
     fn robot_moves_forward() {
         let grid = Grid::new(Location { x: 5, y: 5 });
-        let mut robot = Robot {
+        let robot = Robot {
             location: Location { x: 0, y: 0 },
             direction: Direction::North,
         };
 
-        robot.move_forward(&grid).unwrap();
+        let expected_robot = robot.move_forward(&grid).unwrap();
 
         let expected = Location { x: 0, y: 1 };
-        assert_eq!(robot.location, expected);
+        assert_eq!(expected_robot.location, expected);
     }
 
     #[test]
     fn robot_moves_left() {
-        let mut robot = Robot {
+        let robot = Robot {
             location: Location { x: 0, y: 0 },
             direction: Direction::North,
         };
 
-        robot.turn_left();
+        let expected_robot = robot.turn_left();
 
         let expected = Direction::West;
 
-        assert_eq!(robot.direction, expected);
+        assert_eq!(expected_robot.direction, expected);
     }
 
     #[test]
@@ -201,25 +224,25 @@ mod tests {
         let grid = Grid::new(Location { x: 5, y: 5 });
         let instructions = vec![Instruction::Left, Instruction::Forward, Instruction::Right];
 
-        let mut robot = Robot {
+        let robot = Robot {
             location: Location { x: 1, y: 0 },
             direction: Direction::North,
         };
 
-        let expected = Robot {
+        let expected = FinishedRobot {
             location: Location { x: 0, y: 0 },
             direction: Direction::North,
         };
 
-        robot.follows(&instructions, &grid).unwrap();
+        let moved_robot = robot.follows(&instructions, &grid).unwrap();
 
-        assert_eq!(robot, expected);
+        assert_eq!(moved_robot, expected);
     }
 
     #[test]
     fn robot_follow_multiple_instructions_and_falls_off_the_grid() {
         let grid = Grid::new(Location { x: 5, y: 5 });
-        let mut robot = Robot {
+        let robot = Robot {
             location: Location { x: 0, y: 2 },
             direction: Direction::North,
         };
