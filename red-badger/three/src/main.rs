@@ -31,6 +31,21 @@ struct Robot {
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
+struct LostRobot {
+    location: Location,
+    direction: Direction,
+}
+
+impl From<Robot> for LostRobot {
+    fn from(robot: Robot) -> Self {
+        LostRobot {
+            location: robot.location,
+            direction: robot.direction,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
 enum Instruction {
     Forward,
     Left,
@@ -38,7 +53,7 @@ enum Instruction {
 }
 
 impl Robot {
-    fn move_forward(&mut self, Grid(Location { x, y }): &Grid) -> Result<(), String> {
+    fn move_forward(&mut self, Grid(Location { x, y }): &Grid) -> Result<(), LostRobot> {
         self.location = match self.direction {
             Direction::North if self.location.y + 1 < *y => Location {
                 x: self.location.x,
@@ -57,7 +72,7 @@ impl Robot {
                 y: self.location.y,
             },
             _ => {
-                return Err("Robot cannot move forward".to_string());
+                return Err(self.clone().into());
             }
         };
         Ok(())
@@ -71,12 +86,12 @@ impl Robot {
         self.direction = self.direction.turn_right();
     }
 
-    fn follows(&mut self, instructions: &[Instruction], grid: &Grid) -> Result<(), String> {
+    fn follows(&mut self, instructions: &[Instruction], grid: &Grid) -> Result<(), LostRobot> {
         for instruction in instructions {
             match instruction {
                 Instruction::Left => self.turn_left(),
                 Instruction::Right => self.turn_right(),
-                Instruction::Forward => self.move_forward(grid)?,
+                Instruction::Forward => (self.move_forward(grid)?),
             }
         }
         Ok(())
@@ -213,7 +228,12 @@ mod tests {
 
         let movement = robot.follows(&instructions, &grid);
 
+        let expected = LostRobot {
+            location: Location { x: 0, y: 2 },
+            direction: Direction::West,
+        };
+
         assert!(movement.is_err());
-        assert_eq!(movement.unwrap_err(), "Robot cannot move forward")
+        assert_eq!(movement.unwrap_err(), expected)
     }
 }
