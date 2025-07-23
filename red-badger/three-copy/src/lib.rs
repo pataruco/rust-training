@@ -1,44 +1,43 @@
+use std::num::ParseIntError;
+use thiserror::Error;
+
 #[derive(Debug, PartialEq, Copy, Clone)]
-enum Direction {
+pub enum Direction {
     North,
     East,
     South,
     West,
 }
 
-fn main() {
-    println!("Hello, world!");
-}
-
 #[derive(Debug, PartialEq, Copy, Clone)]
-struct Location {
+pub struct Location {
     pub x: u32,
     pub y: u32,
 }
 #[derive(Debug, PartialEq, Copy, Clone)]
-struct Grid(Location);
+pub struct Grid(Location);
 
 impl Grid {
-    fn new(location: Location) -> Self {
+    pub fn new(location: Location) -> Self {
         Grid(location)
     }
 }
 
 #[must_use]
 #[derive(Debug, PartialEq, Copy, Clone)]
-struct Robot {
+pub struct Robot {
+    pub location: Location,
+    pub direction: Direction,
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub struct LostRobot {
     location: Location,
     direction: Direction,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
-struct LostRobot {
-    location: Location,
-    direction: Direction,
-}
-
-#[derive(Debug, PartialEq, Copy, Clone)]
-struct FinishedRobot {
+pub struct FinishedRobot {
     location: Location,
     direction: Direction,
 }
@@ -62,14 +61,14 @@ impl From<Robot> for FinishedRobot {
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
-enum Instruction {
+pub enum Instruction {
     Forward,
     Left,
     Right,
 }
 
 impl Robot {
-    fn move_forward(mut self, Grid(Location { x, y }): &Grid) -> Result<Self, LostRobot> {
+    pub fn move_forward(mut self, Grid(Location { x, y }): &Grid) -> Result<Self, LostRobot> {
         self.location = match self.direction {
             Direction::North if self.location.y + 1 < *y => Location {
                 x: self.location.x,
@@ -104,7 +103,7 @@ impl Robot {
         return self;
     }
 
-    fn follows(
+    pub fn follows(
         self,
         instructions: &[Instruction],
         grid: &Grid,
@@ -119,6 +118,40 @@ impl Robot {
         }
         Ok(robot.into())
     }
+
+    pub fn parse(input: &str) -> Result<Robot, ParseError> {
+        let mut parts = input.split_whitespace();
+
+        if let (Some(x), Some(y), Some(d)) = (parts.next(), parts.next(), parts.next()) {
+            let x = x.parse()?;
+            let y = y.parse()?;
+            let direction = match d {
+                "N" => Direction::North,
+                "E" => Direction::East,
+                "S" => Direction::South,
+                "W" => Direction::West,
+                _ => return Err(ParseError::InvalidDirection),
+            };
+
+            let robot = Robot {
+                direction,
+                location: Location { x, y },
+            };
+            Ok(robot)
+        } else {
+            Err(ParseError::InvalidInput)
+        }
+    }
+}
+
+#[derive(Debug, Error, PartialEq)]
+pub enum ParseError {
+    #[error("Invalid input")]
+    InvalidInput,
+    #[error("Invalid direction")]
+    InvalidDirection,
+    #[error("Invalid coordinate")]
+    InvalidCoordinate(#[from] ParseIntError),
 }
 
 impl Direction {
@@ -148,6 +181,18 @@ mod tests {
     use std::vec;
 
     use super::*;
+
+    #[test]
+    fn parse() {
+        let robot = Robot::parse("1    2   N").unwrap();
+
+        let expected = Robot {
+            direction: Direction::North,
+            location: Location { x: 1, y: 2 },
+        };
+
+        assert_eq!(robot, expected);
+    }
 
     #[test]
     fn directions_turns_left() {
