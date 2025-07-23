@@ -5,7 +5,7 @@ use three_copy::{Grid, Instruction, Location, ParseError, Robot};
 fn main() -> Result<(), ParseError> {
     let grid = Grid::new(Location { x: 5, y: 5 });
 
-    let robot = match Robot::parse("1 2 N") {
+    let robot: Robot = match "1 2 N".parse::<Robot>() {
         Ok(robot) => robot,
         Err(err) => {
             println!("Error parsing robot: {err}");

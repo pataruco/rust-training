@@ -27,6 +27,27 @@ impl FromStr for Direction {
     }
 }
 
+impl FromStr for Robot {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut parts = s.split_whitespace();
+
+        if let (Some(x), Some(y), Some(d)) = (parts.next(), parts.next(), parts.next()) {
+            let x = x.parse()?;
+            let y = y.parse()?;
+            let direction = d.parse()?;
+            let robot = Robot {
+                direction,
+                location: Location { x, y },
+            };
+            Ok(robot)
+        } else {
+            Err(ParseError::InvalidInput)
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct Location {
     pub x: u32,
@@ -159,22 +180,22 @@ impl Robot {
         Ok(robot.into())
     }
 
-    pub fn parse(input: &str) -> Result<Robot, ParseError> {
-        let mut parts = input.split_whitespace();
+    // pub fn parse(input: &str) -> Result<Robot, ParseError> {
+    //     let mut parts = input.split_whitespace();
 
-        if let (Some(x), Some(y), Some(d)) = (parts.next(), parts.next(), parts.next()) {
-            let x = x.parse()?;
-            let y = y.parse()?;
-            let direction = d.parse()?;
-            let robot = Robot {
-                direction,
-                location: Location { x, y },
-            };
-            Ok(robot)
-        } else {
-            Err(ParseError::InvalidInput)
-        }
-    }
+    //     if let (Some(x), Some(y), Some(d)) = (parts.next(), parts.next(), parts.next()) {
+    //         let x = x.parse()?;
+    //         let y = y.parse()?;
+    //         let direction = d.parse()?;
+    //         let robot = Robot {
+    //             direction,
+    //             location: Location { x, y },
+    //         };
+    //         Ok(robot)
+    //     } else {
+    //         Err(ParseError::InvalidInput)
+    //     }
+    // }
 }
 
 impl Display for LostRobot {
@@ -238,15 +259,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse() {
-        let robot = Robot::parse("1    2   N").unwrap();
+    fn parse_robot() {
+        let actual: Robot = "   1  2    N".parse::<Robot>().unwrap();
 
         let expected = Robot {
             direction: Direction::North,
             location: Location { x: 1, y: 2 },
         };
 
-        assert_eq!(robot, expected);
+        assert_eq!(actual, expected);
     }
     #[test]
     fn parse_instructions() {
