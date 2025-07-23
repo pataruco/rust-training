@@ -179,23 +179,6 @@ impl Robot {
         }
         Ok(robot.into())
     }
-
-    // pub fn parse(input: &str) -> Result<Robot, ParseError> {
-    //     let mut parts = input.split_whitespace();
-
-    //     if let (Some(x), Some(y), Some(d)) = (parts.next(), parts.next(), parts.next()) {
-    //         let x = x.parse()?;
-    //         let y = y.parse()?;
-    //         let direction = d.parse()?;
-    //         let robot = Robot {
-    //             direction,
-    //             location: Location { x, y },
-    //         };
-    //         Ok(robot)
-    //     } else {
-    //         Err(ParseError::InvalidInput)
-    //     }
-    // }
 }
 
 impl Display for LostRobot {
