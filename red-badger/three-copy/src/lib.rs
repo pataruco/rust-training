@@ -13,6 +13,20 @@ pub enum Direction {
     West,
 }
 
+impl FromStr for Direction {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "N" => Ok(Direction::North),
+            "E" => Ok(Direction::East),
+            "S" => Ok(Direction::South),
+            "W" => Ok(Direction::West),
+            _ => Err(ParseError::InvalidDirection),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct Location {
     pub x: u32,
@@ -151,14 +165,7 @@ impl Robot {
         if let (Some(x), Some(y), Some(d)) = (parts.next(), parts.next(), parts.next()) {
             let x = x.parse()?;
             let y = y.parse()?;
-            let direction = match d {
-                "N" => Direction::North,
-                "E" => Direction::East,
-                "S" => Direction::South,
-                "W" => Direction::West,
-                _ => return Err(ParseError::InvalidDirection),
-            };
-
+            let direction = d.parse()?;
             let robot = Robot {
                 direction,
                 location: Location { x, y },
