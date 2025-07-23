@@ -1,18 +1,32 @@
-use three_copy::{Direction, Grid, Instruction, Location, Robot};
+use std::process;
 
-fn main() {
+use three_copy::{Grid, Instruction, Location, ParseError, Robot};
+
+fn main() -> Result<(), ParseError> {
     let grid = Grid::new(Location { x: 5, y: 5 });
 
-    let robot = Robot {
-        location: Location { x: 1, y: 2 },
-        direction: Direction::North,
+    let robot = match Robot::parse("1 2 N") {
+        Ok(robot) => robot,
+        Err(err) => {
+            println!("Error parsing robot: {err}");
+            process::exit(1)
+        }
     };
-    let instructions = vec![
-        Instruction::Left,
-        Instruction::Forward,
-        Instruction::Right,
-        Instruction::Forward,
-    ];
 
-    println!("{:?}", robot.follows(&instructions, &grid));
+    let instructions = match Instruction::parse_list("LFRF") {
+        Ok(instructions) => instructions,
+        Err(err) => {
+            println!("Error parsing instructions: {err}");
+            process::exit(1)
+        }
+    };
+
+    let output = match robot.follows(&instructions, &grid) {
+        Ok(finished_robot) => finished_robot.to_string(),
+        Err(lost_robot) => lost_robot.to_string(),
+    };
+
+    println!("{output:?}");
+
+    Ok(())
 }

@@ -1,4 +1,8 @@
-use std::num::ParseIntError;
+use std::{
+    fmt::{Display, Formatter},
+    num::ParseIntError,
+    str::FromStr,
+};
 use thiserror::Error;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -57,6 +61,28 @@ impl From<Robot> for FinishedRobot {
             location: robot.location,
             direction: robot.direction,
         }
+    }
+}
+
+impl FromStr for Instruction {
+    type Err = ParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "F" => Ok(Instruction::Forward),
+            "L" => Ok(Instruction::Left),
+            "R" => Ok(Instruction::Right),
+            _ => Err(ParseError::InvalidInstruction),
+        }
+    }
+}
+
+impl Instruction {
+    pub fn parse_list(input: &str) -> Result<Vec<Self>, ParseError> {
+        input
+            .trim()
+            .chars()
+            .map(|c| c.to_string().parse())
+            .collect()
     }
 }
 
@@ -144,8 +170,30 @@ impl Robot {
     }
 }
 
+impl Display for LostRobot {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} {} {:?} LOST",
+            self.location.x, self.location.y, self.direction
+        )
+    }
+}
+
+impl Display for FinishedRobot {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} {} {:?}",
+            self.location.x, self.location.y, self.direction
+        )
+    }
+}
+
 #[derive(Debug, Error, PartialEq)]
 pub enum ParseError {
+    #[error("Invalid instruction")]
+    InvalidInstruction,
     #[error("Invalid input")]
     InvalidInput,
     #[error("Invalid direction")]
@@ -192,6 +240,25 @@ mod tests {
         };
 
         assert_eq!(robot, expected);
+    }
+    #[test]
+    fn parse_instructions() {
+        let instructions = "     LRFFR ";
+        let expected = Ok(vec![
+            Instruction::Left,
+            Instruction::Right,
+            Instruction::Forward,
+            Instruction::Forward,
+            Instruction::Right,
+        ]);
+
+        let actual = Instruction::parse_list(instructions);
+
+        if let Err(err) = actual {
+            panic!("Unexpected error: {}", err);
+        }
+
+        assert_eq!(actual, expected);
     }
 
     #[test]
