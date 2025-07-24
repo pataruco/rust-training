@@ -1,44 +1,82 @@
+use std::{
+    fmt::{Display, Formatter},
+    num::ParseIntError,
+    str::FromStr,
+};
+use thiserror::Error;
+
 #[derive(Debug, PartialEq, Copy, Clone)]
-enum Direction {
+pub enum Direction {
     North,
     East,
     South,
     West,
 }
 
-fn main() {
-    println!("Hello, world!");
+impl FromStr for Direction {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "N" => Ok(Direction::North),
+            "E" => Ok(Direction::East),
+            "S" => Ok(Direction::South),
+            "W" => Ok(Direction::West),
+            _ => Err(ParseError::InvalidDirection),
+        }
+    }
+}
+
+impl FromStr for Robot {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut parts = s.split_whitespace();
+
+        if let (Some(x), Some(y), Some(d)) = (parts.next(), parts.next(), parts.next()) {
+            let x = x.parse()?;
+            let y = y.parse()?;
+            let direction = d.parse()?;
+            let robot = Robot {
+                direction,
+                location: Location { x, y },
+            };
+            Ok(robot)
+        } else {
+            Err(ParseError::InvalidInput)
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
-struct Location {
+pub struct Location {
     pub x: u32,
     pub y: u32,
 }
 #[derive(Debug, PartialEq, Copy, Clone)]
-struct Grid(Location);
+pub struct Grid(Location);
 
 impl Grid {
-    fn new(location: Location) -> Self {
+    pub fn new(location: Location) -> Self {
         Grid(location)
     }
 }
 
 #[must_use]
 #[derive(Debug, PartialEq, Copy, Clone)]
-struct Robot {
+pub struct Robot {
+    pub location: Location,
+    pub direction: Direction,
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub struct LostRobot {
     location: Location,
     direction: Direction,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
-struct LostRobot {
-    location: Location,
-    direction: Direction,
-}
-
-#[derive(Debug, PartialEq, Copy, Clone)]
-struct FinishedRobot {
+pub struct FinishedRobot {
     location: Location,
     direction: Direction,
 }
@@ -61,15 +99,37 @@ impl From<Robot> for FinishedRobot {
     }
 }
 
+impl FromStr for Instruction {
+    type Err = ParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "F" => Ok(Instruction::Forward),
+            "L" => Ok(Instruction::Left),
+            "R" => Ok(Instruction::Right),
+            _ => Err(ParseError::InvalidInstruction),
+        }
+    }
+}
+
+impl Instruction {
+    pub fn parse_list(input: &str) -> Result<Vec<Self>, ParseError> {
+        input
+            .trim()
+            .chars()
+            .map(|c| c.to_string().parse())
+            .collect()
+    }
+}
+
 #[derive(Debug, PartialEq, Copy, Clone)]
-enum Instruction {
+pub enum Instruction {
     Forward,
     Left,
     Right,
 }
 
 impl Robot {
-    fn move_forward(mut self, Grid(Location { x, y }): &Grid) -> Result<Self, LostRobot> {
+    pub fn move_forward(mut self, Grid(Location { x, y }): &Grid) -> Result<Self, LostRobot> {
         self.location = match self.direction {
             Direction::North if self.location.y + 1 < *y => Location {
                 x: self.location.x,
@@ -104,7 +164,7 @@ impl Robot {
         return self;
     }
 
-    fn follows(
+    pub fn follows(
         self,
         instructions: &[Instruction],
         grid: &Grid,
@@ -119,6 +179,38 @@ impl Robot {
         }
         Ok(robot.into())
     }
+}
+
+impl Display for LostRobot {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} {} {:?} LOST",
+            self.location.x, self.location.y, self.direction
+        )
+    }
+}
+
+impl Display for FinishedRobot {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} {} {:?}",
+            self.location.x, self.location.y, self.direction
+        )
+    }
+}
+
+#[derive(Debug, Error, PartialEq)]
+pub enum ParseError {
+    #[error("Invalid instruction")]
+    InvalidInstruction,
+    #[error("Invalid input")]
+    InvalidInput,
+    #[error("Invalid direction")]
+    InvalidDirection,
+    #[error("Invalid coordinate")]
+    InvalidCoordinate(#[from] ParseIntError),
 }
 
 impl Direction {
@@ -148,6 +240,37 @@ mod tests {
     use std::vec;
 
     use super::*;
+
+    #[test]
+    fn parse_robot() {
+        let actual: Robot = "   1  2    N".parse::<Robot>().unwrap();
+
+        let expected = Robot {
+            direction: Direction::North,
+            location: Location { x: 1, y: 2 },
+        };
+
+        assert_eq!(actual, expected);
+    }
+    #[test]
+    fn parse_instructions() {
+        let instructions = "     LRFFR ";
+        let expected = Ok(vec![
+            Instruction::Left,
+            Instruction::Right,
+            Instruction::Forward,
+            Instruction::Forward,
+            Instruction::Right,
+        ]);
+
+        let actual = Instruction::parse_list(instructions);
+
+        if let Err(err) = actual {
+            panic!("Unexpected error: {}", err);
+        }
+
+        assert_eq!(actual, expected);
+    }
 
     #[test]
     fn directions_turns_left() {
